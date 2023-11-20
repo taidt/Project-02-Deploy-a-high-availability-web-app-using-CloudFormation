@@ -41,3 +41,17 @@ Set up a bastion host (jump box) to allow you to SSH into your private subnet se
 
 ## Project setup: 
 
+aws cloudformation create-stack  --stack-name tutai92-udagram-s3  --template-body file://Project-02-Deploy-a-high-availability-web-app-using-CloudFormation\s3.yml  --parameters file://Project-02-Deploy-a-high-availability-web-app-using-CloudFormation\s3-parameters.json --capabilities "CAPABILITY_NAMED_IAM" --region us-east-1 
+
+aws cloudformation create-stack  --stack-name tutai92-udagram-network  --template-body file://d:\Udacity\Project02\Project-02-Deploy-a-high-availability-web-app-using-CloudFormation\network.yml  --parameters file://d:\Udacity\Project02\Project-02-Deploy-a-high-availability-web-app-using-CloudFormation\network-parameters.json  --region us-east-1 
+
+aws cloudformation create-stack  --stack-name tutai92-udagram-network  --template-body file://Project-02-Deploy-a-high-availability-web-app-using-CloudFormation\network.yml  --parameters file://Project-02-Deploy-a-high-availability-web-app-using-CloudFormation\network-parameters.json  --region us-east-1 
+
+
+aws cloudformation delete-stack --stack-name tutai92-udagram-network --region us-east-1 
+
+aws cloudformation create-stack  --stack-name tutai92-udagram-servers  --template-body file://Project-02-Deploy-a-high-availability-web-app-using-CloudFormation\servers.yml  --parameters file://Project-02-Deploy-a-high-availability-web-app-using-CloudFormation\servers-parameters.json --capabilities "CAPABILITY_NAMED_IAM" --region us-east-1 
+
+aws cloudformation delete-stack --stack-name tutai92-udagram-servers --region us-east-1 
+
+aws cloudformation update-stack  --stack-name tutai92-udagram-servers  --template-body file://Project-02-Deploy-a-high-availability-web-app-using-CloudFormation\servers.yml  --parameters file://Project-02-Deploy-a-high-availability-web-app-using-CloudFormation\servers-parameters.json --capabilities "CAPABILITY_NAMED_IAM" --region us-east-1 

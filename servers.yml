@@ -1,90 +1,66 @@
-Description: tutai92 - Project 02 - Deploy a high availability web app using CloudFormation - application specific resources 
+Description: tutai92 - Project 02 - Deploy a high availability web app using CloudFormation - application specific resources
 
 Parameters:
-
   ProjectName:
-      Type: String
-      Description: Project name used for tagging resources
+    Type: String
+    Description: Project name used for tagging resources
 
-  KeyPair:
-      Type: AWS::SSM::Parameter::Value<AWS::EC2::KeyPair::KeyName>
-      Description: AWS key pair in us-east-1
+  # KeyPair:
+  #     Type: AWS::SSM::Parameter::Value<AWS::EC2::KeyPair::KeyName>
+  #     Description: AWS key pair in us-east-1
 
   InstanceType:
-      Type: String
-      Description: EC2 instance type. For the second project requirements is t2.micro.
-      AllowedValues:
-          - t2.micro
-          - t3.small
-          - t3.medium
+    Type: String
+    Description: EC2 instance type. For the second project requirements is t2.micro.
+    AllowedValues:
+      - t2.micro
+      - t3.small
+      - t3.medium
 
 Resources:
-
-  S3BucketUdagram:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: project02-udagram-s3bucket
-      AccessControl: Private
-      VersioningConfiguration:
-        Status: Enabled
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: false
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-      Tags:
-        - Key: Name
-          Value: !Ref ProjectName
-
   LoadBalancerSecurityGroup:
-      Type: AWS::EC2::SecurityGroup
-      Properties:
-        GroupDescription: Load Balancer Security Group for ${ProjectName} 
-        VpcId:
-          Fn::ImportValue:
-            !Sub ${ProjectName}-vpc-id
-        SecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Load Balancer Security Group for ${ProjectName}
+      VpcId:
+        Fn::ImportValue: !Sub ${ProjectName}-vpc-id
+      SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
-        SecurityGroupEgress:
+      SecurityGroupEgress:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
           CidrIp: "0.0.0.0/0"
-        Tags:
+      Tags:
         - Key: Name
           Value: !Sub ${ProjectName}-load-balancer-security-group
 
   LoadBalancerWebApplicationSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Web Application Security Group for ${ProjectName} 
+      GroupDescription: Web Application Security Group for ${ProjectName}
       VpcId:
-        Fn::ImportValue:
-          !Sub ${ProjectName}-vpc-id
+        Fn::ImportValue: !Sub ${ProjectName}-vpc-id
       SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
-        CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
-      - IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
-        CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
           Value: !Sub ${ProjectName}-load-balancer-web-application-security-group
 
   WebApplicationLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
-    Properties: 
+    Properties:
       LaunchTemplateName: !Sub ${ProjectName}-web-servers-application
       LaunchTemplateData:
         UserData:
@@ -96,7 +72,7 @@ Resources:
             unzip awscliv2.zip
             ./aws/install
 
-            aws s3 cp s3://project02-udagram-s3bucket/udagram.zip . 
+            aws s3 cp s3://project02-udagram-s3bucket-tutai92/udagram.zip . 
             unzip -o udagram.zip
             sudo rm ~/../../var/www/html/index.html
             sudo mv -v ./src/* ~/../../var/www/html
@@ -110,9 +86,9 @@ Resources:
           - !Ref LoadBalancerWebApplicationSecurityGroup
         InstanceType: !Ref InstanceType
         BlockDeviceMappings:
-        - DeviceName: "/dev/sdk"
-          Ebs:
-            VolumeSize: '10'
+          - DeviceName: "/dev/sdk"
+            Ebs:
+              VolumeSize: "10"
         IamInstanceProfile:
           Name: !Ref WebAppInstanceProfile
 
@@ -121,32 +97,47 @@ Resources:
     Properties:
       RoleName: !Sub ${ProjectName}-web-servers-application
       AssumeRolePolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
-        - Effect: 'Allow'
-          Principal:
-            Service:
-            - 'ec2.amazonaws.com'
-          Action:
-          - 'sts:AssumeRole'
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
       Policies:
-        - PolicyName: s3
+        - PolicyName: !Sub "${ProjectName}-policy"
           PolicyDocument:
-            Version: '2012-10-17'
+            Version: "2012-10-17"
             Statement:
-            - Effect: Allow
-              Action:
-              - 's3:GetObject'
-              Resource:
-                - !Sub arn:aws:s3:::project02-udagram-s3bucket/*
-
+              - Effect: Allow
+                Action:
+                  - ec2:CreateTags
+                  - ec2:DescribeInstances
+                  - ec2:AssociateAddress
+                  - ec2:AllocateAddress
+                  - ec2:DescribeAddresses
+                Resource:
+                  - "*"
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource:
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*"
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:Get*
+                  - s3:Put*
+                Resource:
+                  - !Sub "arn:aws:s3:::project02-udagram-s3bucket-tutai92"
 
   WebAppInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
-      Path: '/'
+      Path: "/"
       Roles:
-      - !Ref WebAppInstanceRole
+        - !Ref WebAppInstanceRole
 
   WebAppTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -159,16 +150,15 @@ Resources:
       Port: 80
       Protocol: HTTP
       UnhealthyThresholdCount: 5
-      VpcId: 
-        Fn::ImportValue:
-          !Sub ${ProjectName}-vpc-id
+      VpcId:
+        Fn::ImportValue: !Sub ${ProjectName}-vpc-id
 
   WebAppGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       VPCZoneIdentifier:
-        - Fn::ImportValue: !Sub ${EnvironmentName}-private-subnet1
-        - Fn::ImportValue: !Sub ${EnvironmentName}-private-subnet2
+        - Fn::ImportValue: !Sub ${ProjectName}-private-subnet1
+        - Fn::ImportValue: !Sub ${ProjectName}-private-subnet2
       LaunchTemplate:
         LaunchTemplateId: !Ref WebApplicationLaunchTemplate
         Version: !GetAtt WebApplicationLaunchTemplate.LatestVersionNumber
@@ -186,45 +176,38 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Subnets:
-      - Fn::ImportValue: !Sub ${ProjectName}-public-subnet1
-      - Fn::ImportValue: !Sub ${ProjectName}-public-subnet2
+        - Fn::ImportValue: !Sub ${ProjectName}-public-subnet1
+        - Fn::ImportValue: !Sub ${ProjectName}-public-subnet2
       SecurityGroups:
-      - Ref: LoadBalancerSecurityGroup
+        - Ref: LoadBalancerSecurityGroup
 
   Listener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
-      - Type: forward
-        TargetGroupArn:
-          Ref: WebAppTargetGroup
+        - Type: forward
+          TargetGroupArn:
+            Ref: WebAppTargetGroup
       LoadBalancerArn:
         Ref: WebAppLB
-      Port: '80'
+      Port: "80"
       Protocol: HTTP
 
   ALBListenerRule:
-      Type: AWS::ElasticLoadBalancingV2::ListenerRule
-      Properties:
-        Actions:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
         - Type: forward
           TargetGroupArn: !Ref WebAppTargetGroup
-        Conditions:
+      Conditions:
         - Field: path-pattern
           Values: [/]
-        ListenerArn: !Ref Listener
-        Priority: 1
+      ListenerArn: !Ref Listener
+      Priority: 1
 
-  Outputs:
+Outputs:
   LoadBalancerDNSName:
     Description: DNS name of the load balancer
     Value: !GetAtt WebAppLB.DNSName
     Export:
       Name: !Sub ${ProjectName}-load-balancer-dns
-
-  
-
-
-    
-
-    
