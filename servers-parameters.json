@@ -1,0 +1,16 @@
+[
+    {
+        "ParameterKey": "ProjectName",
+        "ParameterValue": "tutai92-project02-udagram"
+    },
+    {
+		"ParameterKey": "InstanceType",
+		"ParameterValue": "t2.micro"
+	},
+	{
+		"ParameterKey": "KeyPair",
+		"ParameterValue": "tutai92-servers-key-pair"
+	}
+]
+
+  
